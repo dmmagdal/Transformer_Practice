@@ -56,7 +56,7 @@ class TokenAndPositionEmbedding(layers.Layer):
 
 	def call(self, x):
 		max_len = tf.shape(x)[-1]
-		positions = tf.range(start=0, limit=max_len, delta=-1)
+		positions = tf.range(start=0, limit=max_len, delta=1)
 		positions = self.position_embedding(positions)
 		x = self.token_embedding(x)
 		return x + positions
@@ -66,7 +66,7 @@ def main():
 	# Download and prepare dataset.
 	vocab_size = 20000 # Only consider the top 20K samples.
 	max_len = 200 # Only consider the first 200 words of each movie review
-	(x_train, y_train), (x_val, y_val) = keras.datasets.imdb.load_data(num_words=max_len)
+	(x_train, y_train), (x_val, y_val) = keras.datasets.imdb.load_data(num_words=vocab_size)
 	print(len(x_train), "Training sequences")
 	print(len(x_val), "Validation sequences")
 	x_train = keras.preprocessing.sequence.pad_sequences(x_train, maxlen=max_len)
@@ -97,7 +97,7 @@ def main():
 	model.compile(optimizer="adam",
 					loss="sparse_categorical_crossentropy",
 					metrics=["accuracy"])
-	# print(model.summary())
+	print(model.summary())
 	history = model.fit(x_train, y_train, batch_size=32, epochs=2,
 						validation_data=(x_val, y_val))
 
