@@ -14,7 +14,15 @@ programs that test out the capabilities of the gpt2.py module.
 To run the program on Docker, there are two docker files for CPU only and GPU. The docker file
 uses Tensorflow 2.4.0 and can be built and run with the following commands:
 
-docker build -t buildTagName Path/To/Docker/File
+docker build -t buildTagName -f Path/To/Docker/File .
+
+e.g.
+
+docker build -t gpt-2-gpu -f Dockerfile.gpu .
+
+OR
+
+docker build -t gpt-2-cpu -f Dockerfile.cpu .
 
 To run the docker image, run the following command:
 
