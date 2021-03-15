@@ -27,3 +27,18 @@ docker build -t gpt-2-cpu -f Dockerfile.cpu .
 To run the docker image, run the following command:
 
 docker run -it --rm --volume volume/path/on/container buildTagName
+
+### Docker resources
+
+Follow the following links for running Tensorflow in Docker:
+
+	Tensorflow website:
+https://www.tensorflow.org/tfx/serving/docker
+https://www.tensorflow.org/install/docker
+
+	Dockerhub website:
+https://hub.docker.com/r/tensorflow/tensorflow/
+https://hub.docker.com/r/tensorflow/tensorflow/tags/?page=1&ordering=last_updated&name=2.4.0
+
+	Docker cheatsheet:
+https://groupe-sii.github.io/cheat-sheets/docker/index.html
