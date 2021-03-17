@@ -10,10 +10,12 @@ import os
 import re
 import string
 import nltk
+import gpt2
 import tensorflow as tf
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.layers.experimental.preprocessing import TextVectorization
 import tensorflow_datasets as tfds
+from datetime import datetime
 
 
 #'''
@@ -33,6 +35,7 @@ def main():
 	# get_vocab_from_texts() function on the openwebtext corpus dataset
 	# using only the first 5,000 texts (out of 20,000 total).
 	openwebtext_vocab = 10438152
+	start = datetime.now()
 
 	# Initialize a batch size and sequence length.
 	max_seq_len = 1024
@@ -44,10 +47,23 @@ def main():
 	openwebtext_dataset = tf.data.TextLineDataset(text_list)
 	openwebtext_dataset = openwebtext_dataset.shuffle(buffer_size=256)
 	openwebtext_dataset = openwebtext_dataset.batch(batch_size)
+
+	# Create a text vectorization layer to adapt the text. Note that
+	# while a standardization function is not required, it is
+	# recommended to have one to atleast lowercase and remove
+	# punctuation from the text. As for the max_tokens, this details
+	# the maximum vocabulary for the layer. If this value is not set,
+	# there is no cap on the size of the vocabulary. Note that this
+	# vocabulary contains 1 out-of-vocabulary (OOV) token, so the
+	# effective number of tokens is max_tokens - 1 (- 1 if output_mode
+	# == "int" else 0). See more details from the Tensorflow 2.0
+	# documentation for the TextVectorization layer.
+	vocab_size = 50257
 	text_vector = TextVectorization(
 					# standardize=custom_standardization,
 					# max_tokens=len(openwebtext_vocab) - 1,
-					max_tokens=openwebtext_vocab - 1,
+					# max_tokens=openwebtext_vocab - 1,
+					max_tokens=vocab_size,
 					output_mode="int",
 					output_sequence_length=max_seq_len + 1)
 	text_vector.adapt(openwebtext_dataset)
@@ -56,7 +72,7 @@ def main():
 	# Shift words by 1 position so that the target for position (i) is
 	# word at position (i + 1). The model will use all words up till
 	# position (i) to predict the next word.
-	# @param: text, the text from a text dataset.
+	# @param: text, a tensor from the text dataset.
 	# @return: returns a tuple of the input and output tokenized 
 	#	sequences for the text provided.
 	def prepare_input_labels(text):
@@ -82,6 +98,54 @@ def main():
 	byte_encoder.load_from_file("./byte_encoder")
 	subword_encoder.load_from_file("./subword_encoder")
 	'''
+
+	# Initialize hyperparameters for training (these parameters are the
+	# same as those in GPT-2 Small, except for the vocab_size).
+	#vocab_size = len(vocab) # The size of the vocabulary entered into
+	# the model.
+	print("Vocab size: {}".format(vocab_size))
+	print("Time to reach this point {}".format(datetime.now() - start))
+	vocab_size = 50257 # Use the default one from OpenAI.
+	embedding_size = 786 # Embedding size for each token.
+	context_size = 1024 # The maximum number of tokens in each
+	# sequence.
+	n_heads = 12 # Number of attention heads.
+	n_layers = 12 # Number of layers.
+	ff_dim = embedding_size * 4 # Hidden layer size in feed forward
+	# neural network inside transformer.
+	verbose = 2 # The verbosity of the training.
+	epochs = 50 # The number of epochs to train the model for.
+
+	# Tokenize starting prompt.
+	word_to_index = {}
+	for index, word in enumerate(vocab):
+		word_to_index[word] = index
+	start_prompt = "the sky today is"
+	start_tokens = [word_to_index.get(_, 1) for _ in start_prompt.split()]
+	num_tokens_generated = 40
+	text_gen_callback = gpt2.TextGenerator(num_tokens_generated, start_tokens, 
+											vocab, context_size)
+
+	# Initialize a GPT2 object.
+	new_gpt = gpt2.GPT2(n_heads=n_heads, n_layers=n_layers, 
+						vocab_size=vocab_size, ff_dim=ff_dim, 
+						embedding_size=embedding_size, 
+						context_size=context_size)
+
+	# Train GPT2 on data.
+	new_gpt.gpt_model.fit(openwebtext_dataset, verbose=verbose, epochs=epochs, 
+							callbacks=[text_gen_callback])
+
+	# Save GPT2 model.
+	save_path = "./gpt2_model_small_openwebtext"
+	if not os.path.exists(save_path):
+		os.mkdir(save_path)
+	new_gpt.save(save_path)
+
+	# Load GPT2 model.
+	load_gpt = gpt2.GPT2()
+	load_gpt.load(save_path)
+	print(load_gpt.gpt_model.summary())
 
 	# Exit the main program.
 	exit(0)
@@ -205,7 +269,7 @@ def clean_file_lines(file_lines):
 
 '''
 # Standardize the texts in the dataset.
-# @param: input_string, a tesnor from the text dataset.
+# @param: input_string, a tensor from the text dataset.
 # @return: returns the input_string modified
 def custom_standardization(input_string):
 	# There are special strings in the text. These may interfere
