@@ -22,7 +22,7 @@ def get_vocab(file_path):
 		for line in open_file:
 			words = line.strip().split()
 			for word in words:
-				vocab[" ".join(list(word) + "</w>")] += 1
+				vocab[" ".join(list(word)) + " </w>"] += 1
 
 	# Return the vocabulary dictionary.
 	return vocab
@@ -42,13 +42,13 @@ def get_stats(vocab):
 	return pairs
 
 
-def merge_vocab(pair, new_vocab):
-	ouptut_vocab = {}
+def merge_vocab(pair, input_vocab):
+	output_vocab = {}
 	bigram = re.escape(" ".join(pair))
 	p = re.compile(r'(?<!\S)' + bigram + r'(?<!\S)')
-	for word in new_vocab:
+	for word in input_vocab:
 		output_word = p.sub("".join(pair), word)
-		output_vocab[output_word] = new_vocab[output_word]
+		output_vocab[output_word] = input_vocab[word]
 	return output_vocab
 
 
@@ -61,6 +61,7 @@ def get_tokens(vocab):
 	return tokens
 
 
+'''
 # Create a loop that will create tokenization out of the vocabulary.
 for i in range(num_merges):
 	pairs = get_stats(vocab)
@@ -71,6 +72,7 @@ for i in range(num_merges):
 	best = max(pairs, key=pairs.get)
 	vocab = merge_vocab(best, vocab)
 	tokens = get_tokens(vocab)
+'''
 
 
 # To encode a given sentence:
@@ -130,7 +132,8 @@ def tokenize_word(string, sorted_tokens, unkown_token="</u>"):
 	return string_tokens
 
 
+'''
 tokens_frequencies, vocab_tokenization = get_tokens_from_vocab(vocab)
 sorted_tokens_tuple = sorted(tokens_frequencies.items(), key=lambda item: (measure_token_length(item[0]), item[1]), reverse=True)
 sorted_tokens = [token for (token, freq) in sorted_tokens_tuple]
-
+'''
