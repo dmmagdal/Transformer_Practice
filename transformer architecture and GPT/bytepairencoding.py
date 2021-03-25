@@ -11,6 +11,7 @@
 import os
 import re
 import collections
+import json
 
 
 def get_vocab(file_path):
@@ -23,6 +24,11 @@ def get_vocab(file_path):
 			words = line.strip().split()
 			for word in words:
 				vocab[" ".join(list(word)) + " </w>"] += 1
+
+				# Alternative way to parse texts without marking the
+				# end of each word with "</w>". Using this will affect
+				# the original code for measure_token_length.
+				#vocab[" ".join(list(word))] += 1
 
 	# Return the vocabulary dictionary.
 	return vocab
@@ -45,7 +51,7 @@ def get_stats(vocab):
 def merge_vocab(pair, input_vocab):
 	output_vocab = {}
 	bigram = re.escape(" ".join(pair))
-	p = re.compile(r'(?<!\S)' + bigram + r'(?<!\S)')
+	p = re.compile(r'(?<!\S)' + bigram + r'(?!\S)')
 	for word in input_vocab:
 		output_word = p.sub("".join(pair), word)
 		output_vocab[output_word] = input_vocab[word]
@@ -103,7 +109,7 @@ def measure_token_length(token):
 		return len(token)
 
 
-def tokenize_word(string, sorted_tokens, unkown_token="</u>"):
+def tokenize_word(string, sorted_tokens, unknown_token="</u>"):
 	if string == "":
 		return []
 
@@ -137,3 +143,203 @@ tokens_frequencies, vocab_tokenization = get_tokens_from_vocab(vocab)
 sorted_tokens_tuple = sorted(tokens_frequencies.items(), key=lambda item: (measure_token_length(item[0]), item[1]), reverse=True)
 sorted_tokens = [token for (token, freq) in sorted_tokens_tuple]
 '''
+
+
+class Encoder:
+	def __init__(self, vocab=None, tokens=None, tokens_to_value=None, learn_vocab=False, token_size=None, num_merges=1000):
+		# Load in the vocab and tokens dictionaries from the arguments.
+		# If they are not passed in (defualt None), initialize them to
+		# empty dictionaries.
+		if vocab:
+			self.vocab = vocab
+		else:
+			self.vocab = collections.defaultdict(int)
+		if tokens:
+			self.tokens = tokens
+		else:
+			self.tokens = collections.defaultdict(int)
+		if tokens_to_value:
+			self.tokens_to_value = tokens_to_value
+		else:
+			self.tokens_to_value = collections.defaultdict(int)
+
+		# If the learn_vocab argument was passed in as True, call the
+		# function to merge the vocab and create the most frequent
+		# subword tokens.
+		if learn_vocab:
+			self.learn_vocab(token_size=token_size, num_merges=num_merges)
+
+		# Update the other class variables.
+		self.update()
+		'''
+		# Use the existing vocabulary to get the tokens (and their
+		# frequencies) and use that to create a sorted list of tokens.
+		self.tokens_frequencies, self.vocab_tokenization = get_tokens_from_vocab(self.vocab)
+		self.sorted_tokens_tuple = sorted(self.tokens_frequencies.items(), 
+											key=lambda item: (measure_token_length(item[0]), item[1]), 
+											reverse=True)
+		self.sorted_tokens = [token for (token, freq) in self.sorted_tokens_tuple]
+		'''
+
+
+	# Perform the following loop using the vocabulary and tokens to
+	# find the most frequent character pairs and create subword tokens
+	# to store.
+	# @param: token_size, the maximum number of tokens that are allowed
+	#	to exist. Default value is None but this is usually an int 
+	#	value.
+	# @param: num_merges, the number of merges that are going to occur.
+	#	Default value is 1000.
+	# @return: returns nothing.
+	def learn_vocab(self, token_size=None, num_merges=1000):
+		# Get the smallest of either the maximum number of tokens to
+		# have (token_size) or the number of merges (num_merges).
+		if not token_size:
+			merges = num_merges
+		else:
+			merges = min(token_size, num_merges)
+
+		# Iterate through the following loop to update the vocabulary
+		# (and tokens).
+		for i in range(merges):
+			# Get the character pairs from the vocabulary and isolate
+			# the most frequent character pair. 
+			pairs = get_stats(self.vocab)
+			best = max(pairs, key=pairs.get)
+
+			# Merge the vocabulary with the most frequent character
+			# pair and update the tokens.
+			self.vocab = merge_vocab(best, self.vocab)
+			self.tokens = get_tokens(self.vocab)
+
+		# Update the class variables.
+		self.update()
+
+		# Return the function.
+		return
+
+
+	# Convert a word into tokens and then convert those tokens to their
+	# unique values and return that as a list.
+	# @param: input_word, a word string that needs to be encoded.
+	# @return:
+	def encode(self, input_word):
+		return tokenize_word(input_word, self.sorted_tokens, "</u>")
+
+
+	# Convert a list of tokens and reconstruct a word.
+	# @param: token_list, 
+	# @return:
+	def decode(self, token_list):
+		return "".join(token_list)
+
+
+	# Save the files for the encoder to the specified save folder path.
+	# @param: save_folder_path,
+	# @return: returns nothing.
+	def save(self, save_folder_path):
+		# If the save folder path does not exist or is not a directory,
+		# create the directory at the specified path.
+		if not os.path.exists(save_folder_path) or not os.path.isdir(save_folder_path):
+			#print("Folder path " + save_folder_path + " could not be found.")
+			#return
+			os.mkdir(save_folder_path)
+
+		# Open the vocabulary and tokens json files and save the data
+		# to the respective variables.
+		with open(save_folder_path + "vocab.json", "w+", encoding="utf-8") as vocab_file:
+			json.dump(self.vocab, vocab_file, indent=4)
+		with open(save_folder_path + "tokens.json", "w+", encoding="utf-8") as token_file:
+			json.dump(self.tokens, token_file, indent=4)
+		with open(save_folder_path + "token2value.json", "w+", encoding="utf-8") as token2value_file:
+			json.dump(self.tokens_to_value, token2value_file, indent=4)
+
+		# Return the function.
+		return
+
+
+	# Load in the files for the encoder from the specified save folder
+	# path. Note that this will override the class variables.
+	# @param: save_folder_path,
+	# @return: returns nothing.
+	def load(self, save_folder_path):
+		# If the save folder path does not exist or is not a directory,
+		# print and error message and return the function early.
+		if not os.path.exists(save_folder_path) or not os.path.isdir(save_folder_path):
+			print("Folder path " + save_folder_path + " could not be found.")
+			return
+
+		# Open the vocabulary and tokens json files and save the data
+		# to the respective variables.
+		with open(save_folder_path + "vocab.json", "r", encoding="utf-8") as vocab_file:
+			self.vocab = json.load(vocab_file)
+		with open(save_folder_path + "tokens.json", "r", encoding="utf-8") as token_file:
+			self.tokens = json.load(token_file)
+		with open(save_folder_path + "token2value.json", "r", encoding="utf-8") as token2value_file:
+			self.tokens_to_value = json.load(token2value_file)
+
+		# Update the class variables given the loaded vocabulary and
+		# tokens.
+		self.update()
+
+		# Return the function.
+		return
+
+
+	'''
+	# XXX --- TODO --- XXX
+	# Figure out how updating the vocabulary with new words and
+	# frequencies will affect and update the remaining variables such
+	# as the tokens.
+	# XXX --- END TODO --- XXX
+	# Update the current vocabulary.
+	# @param: new_vocab, a dictionary mapping new vocabulary words to
+	#	their frequency.
+	# @return: returns nothing.
+	def update_vocab(self, new_vocab):
+		# Iterate through every new word in the new vocabulary. If the
+		# new word already exists in the current vocabulary, add the
+		# frequencies to the entry. Otherwise, the new word does not
+		# exist in the vocabulary so the new word's frequency is used.
+		for new_word, freq in new_vocab.items():
+			if new_word in self.vocab:
+				self.vocab[new_word] += freq
+			else:
+				self.vocab[new_word] = freq
+
+		# Update the tokens and other class variables.
+		#self.update()
+
+		# Return the function.
+		return
+	'''
+
+
+	# Update class variables other than the vocabulary.
+	# @param: takes no arguments.
+	# @return: returns nothing.
+	def update(self):
+		# Update the tokens from the vocabulary.
+		self.tokens = get_tokens(self.vocab)
+
+		# Update the tokens to values dictionary.
+		value = 1
+		for token in sorted(list(self.tokens.keys())):
+			self.tokens_to_value[token] = value
+			value += 1
+		'''
+		self.tokens_to_value[" "] = 0
+		self.tokens_to_value["<|pad|>"] = value + 1
+		self.tokens_to_value["<|endoftext|>"] = value + 2
+		'''
+
+		# Use the existing vocabulary to get the tokens (and their
+		# frequencies) and use that to create a sorted list of tokens.
+		self.tokens_frequencies, self.vocab_tokenization = get_tokens_from_vocab(self.vocab)
+		self.sorted_tokens_tuple = sorted(self.tokens_frequencies.items(), 
+											key=lambda item: (measure_token_length(item[0]), item[1]), 
+											reverse=True)
+		self.sorted_tokens = [token for (token, freq) in self.sorted_tokens_tuple]
+		
+		# Return the function.
+		return

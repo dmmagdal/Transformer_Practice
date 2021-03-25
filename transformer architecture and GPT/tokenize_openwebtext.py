@@ -9,12 +9,14 @@
 import os
 import re
 import string
+import collections
 import nltk
-import gpt2
+#import gpt2
 import tensorflow as tf
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.layers.experimental.preprocessing import TextVectorization
-import tensorflow_datasets as tfds
+#from tensorflow.keras.preprocessing.text import Tokenizer
+#from tensorflow.keras.layers.experimental.preprocessing import TextVectorization
+#import tensorflow_datasets as tfds
+import bytepairencoding as bpe
 from datetime import datetime
 
 
@@ -28,6 +30,77 @@ session = tf.compat.v1.Session(config=config)
 
 
 def main():
+	# Index the files in the openwebtext corpus dataset and learn the
+	# vocabulary.
+	path = "./openwebtext/"
+	text_files = [path + file for file in os.listdir(path)]
+	vocab, pairs, tokens = learn_vocab(text_files)
+	print("Vocab size: {}\nNumber of Pairs: {}\nNumber of Tokens: {}".format(len(vocab), len(pairs), len(tokens)))
+	test_word = "hellfire"
+	test_word_tokenized = encode_text(test_word, vocab)
+	print("Test word: {}\nTest word tokenized: {}\n".format(test_word, ", ".join(test_word_tokenized)))
+
+	# Exit the program.
+	exit(0)
+
+
+def learn_vocab(text_filepaths):
+	# Initialize a variable to store the entire vocabulary of the texts
+	# from openwebtext.
+	#global_vocab = {}
+	global_vocab = collections.defaultdict(int)
+
+	# Iterate through the openwebtext files.
+	for text in text_filepaths[:1]:
+		# Extract the local vocabulary from those files.
+		text_vocab = bpe.get_vocab(text)
+
+		# Merge those values from the local vocabulary to the ones in
+		# the global vocabulary.
+		for word, freq in text_vocab.items():
+			global_vocab[word] += freq
+
+	# Given the global vocabulary from the openwebtext, get the
+	# character pairs from the vocabulary as well as the tokens.
+	NUM_MERGES = 1000
+	#NUM_MERGES = 10000
+	#NUM_MERGES = 100000
+	#pairs = bpe.get_stats(vocab)
+	#tokens = bpe.get_tokens(vocab)
+	for i in range(NUM_MERGES):
+		# Get the character pairs of the global vocabulary.
+		print("Loop Iteration: {}".format(i))
+		pairs = bpe.get_stats(global_vocab)
+
+		# If there were no pairs to get, break the loop.
+		if not pairs:
+			break
+
+		# Get the most frequent character pairs. Merge those two
+		# characters in to one string and add that to the global
+		# vocabulary. Get the tokens from the newly updated global
+		# vocabulary.
+		best = max(pairs, key=pairs.get)
+		global_vocab = bpe.merge_vocab(best, global_vocab)
+		tokens = bpe.get_tokens(global_vocab)
+
+	# Return the global vocabulary, the character pairs, and the
+	# tokens.
+	return global_vocab, pairs, tokens
+
+
+def encode_text(word, vocab):
+	token_frequencies, vocab_tokenization = bpe.get_tokens_from_vocab(vocab)
+
+	sorted_tokens_tuple = sorted(token_frequencies.items(), 
+								key=lambda item: (bpe.measure_token_length(item[0]), item[1]), 
+								reverse=True)
+	sorted_tokens = [token for (token, freq) in sorted_tokens_tuple]
+	return bpe.tokenize_word(string=word, sorted_tokens=sorted_tokens, unknown_token="</u>")
+
+
+'''
+def archived():
 	# Retrieve the vocabulary set and the length of the longest line
 	# from the openwebtext corpus.
 	#openwebtext_vocab, longest_line_len = get_vocab_from_texts()
@@ -84,8 +157,8 @@ def main():
 
 	openwebtext_dataset = openwebtext_dataset.map(prepare_input_labels)
 	openwebtext_dataset = openwebtext_dataset.prefetch(tf.data.experimental.AUTOTUNE)
-
-	'''
+'''
+'''
 	# Intiailize the text encoders.
 	byte_encoder = tfds.deprecated.text.ByteTextEncoder()
 	subword_encoder = tfds.deprecated.text.SubwordTextEncoder(vocab_list=list(openwebtext_vocab))
@@ -97,8 +170,8 @@ def main():
 	# Load the text encoders.
 	byte_encoder.load_from_file("./byte_encoder")
 	subword_encoder.load_from_file("./subword_encoder")
-	'''
-
+'''
+'''
 	# Initialize hyperparameters for training (these parameters are the
 	# same as those in GPT-2 Small, except for the vocab_size).
 	#vocab_size = len(vocab) # The size of the vocabulary entered into
@@ -149,6 +222,7 @@ def main():
 
 	# Exit the main program.
 	exit(0)
+'''
 
 
 # Load in all texts from the specified path and tokenize them with the
