@@ -23,12 +23,12 @@ def get_vocab(file_path):
 		for line in open_file:
 			words = line.strip().split()
 			for word in words:
-				vocab[" ".join(list(word)) + " </w>"] += 1
+				#vocab[" ".join(list(word)) + " </w>"] += 1
 
 				# Alternative way to parse texts without marking the
 				# end of each word with "</w>". Using this will affect
 				# the original code for measure_token_length.
-				#vocab[" ".join(list(word))] += 1
+				vocab[" ".join(list(word))] += 1
 
 	# Return the vocabulary dictionary.
 	return vocab
@@ -145,6 +145,45 @@ sorted_tokens = [token for (token, freq) in sorted_tokens_tuple]
 '''
 
 
+# XXX --- BEGIN NOTE --- XXX
+# All code implmented below this point is not from the source listed in
+# the header.
+# XXX --- END NOTE --- XXX
+
+
+# Combine two vocab dictionaries into one (different function than
+# merge_vocab and is not a part of the original code from the source
+# listed in the header).
+# @param: vocab1, a dictionary containing one vocabulary with its
+#	mapping of words to frequencies.
+# @param: vocab2, a dictionary containing another vocabulary with its
+#	own mapping of words to frequencies.
+# @return: returns a dictionary containing the combined words from both
+#	vocabularies with the total frequencies.
+def combine_vocab(vocab1, vocab2):
+	# Intialize a new dictionary to store the merged vocabularies.
+	new_vocab = {}
+
+	# Store the words and their frequencies from the first vocabulary.
+	#for new_word1, freq1 in vocab1.items():
+	#	new_vocab[new_word1] = freq1
+	new_vocab = vocab1
+
+	# Store the words and their frequencies from the second vocabulary.
+	# If a word already exists in the combined vocabulary (it exists in
+	# the first vocabulary) then add the frequencies. Otherwise, the
+	# the word is unique to the second vocabulary, so its frequency is
+	# simply used.
+	for new_word2, freq2 in vocab2.items():
+		if new_word2 in new_vocab:
+			new_vocab[new_word2] += freq2
+		else:
+			new_vocab[new_word2] = freq2
+
+	# Return the combined vocabulary.
+	return new_vocab
+
+
 class Encoder:
 	def __init__(self, vocab=None, tokens=None, tokens_to_value=None, learn_vocab=False, token_size=None, num_merges=1000):
 		# Load in the vocab and tokens dictionaries from the arguments.
@@ -197,14 +236,21 @@ class Encoder:
 		if not token_size:
 			merges = num_merges
 		else:
-			merges = min(token_size, num_merges)
+			merges = max(token_size, num_merges)
 
 		# Iterate through the following loop to update the vocabulary
 		# (and tokens).
 		for i in range(merges):
+			# Break out of the loop if the token limit has been
+			# initialized and is reached.
+			if token_size and len(self.tokens) == token_size:
+				break
+
 			# Get the character pairs from the vocabulary and isolate
 			# the most frequent character pair. 
 			pairs = get_stats(self.vocab)
+			if not pairs:
+				break
 			best = max(pairs, key=pairs.get)
 
 			# Merge the vocabulary with the most frequent character

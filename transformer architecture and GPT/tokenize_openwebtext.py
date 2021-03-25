@@ -40,6 +40,33 @@ def main():
 	test_word_tokenized = encode_text(test_word, vocab)
 	print("Test word: {}\nTest word tokenized: {}\n".format(test_word, ", ".join(test_word_tokenized)))
 
+	# Repeat the same process, except using the Encoder class in
+	# bytepairencoding.py.
+	global_vocab = {}
+	for text in text_files:
+		print("{}\t{}/{}".format(text, text_files.index(text) + 1, len(text_files)))
+		local_vocab = bpe.get_vocab(text)
+		global_vocab = bpe.combine_vocab(global_vocab, local_vocab)
+	global_encoder = bpe.Encoder(global_vocab)
+	global_encoder.learn_vocab(2**16)
+	global_encoder.save("./openwebtext_corpus_encoder/")
+
+	# General notes about the openwebtext corpus:
+	# 1) There are 21 subsets listed in the corpus (starting from 00 to
+	# 21). With 20610 text files in the folder, that leaves roughly
+	# 1000 text files to each subset. This is something to consider
+	# when training models on standard hardware and can apply to
+	# finetuning the model in addition to trying to train the base
+	# model on the corpus.
+	# 2) Standard hardware is considered to be using a processor
+	# between 1.4 - 2.4 GHz (usually quadcore or more), 4 to 8 to 16 GB
+	# of RAM/memory, and storage of 128+ GB (this can also include a
+	# GPU unit with 4 to 8 GB of VRAM). Compact or Embedded hardware
+	# uses 1.8 GHz (typically ARM) processors, 1 to 4 to 8 GB of
+	# RAM/memory, and storage of less than 128 GB. High Performance
+	# hardware is anything such as a workstation, server, or
+	# distributed system.
+
 	# Exit the program.
 	exit(0)
 
