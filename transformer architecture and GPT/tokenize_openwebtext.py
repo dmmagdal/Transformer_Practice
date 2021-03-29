@@ -66,6 +66,10 @@ def main():
 	# RAM/memory, and storage of less than 128 GB. High Performance
 	# hardware is anything such as a workstation, server, or
 	# distributed system.
+	# 3) Under standard hardware (specifically under 8GB of RAM), this
+	# program runs out of RAM a bit after 10K files. Dividing the
+	# reading and storing dictionaries (vocabulary, tokens, etc) into 
+	# chunks is advised.
 
 	# Exit the program.
 	exit(0)

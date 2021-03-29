@@ -310,9 +310,20 @@ class Encoder:
 	# @return: returns nothing.
 	def load(self, save_folder_path):
 		# If the save folder path does not exist or is not a directory,
-		# print and error message and return the function early.
+		# print and error message and return the function early. Repeat
+		# this for all required save files that should exist in that
+		# directory.
 		if not os.path.exists(save_folder_path) or not os.path.isdir(save_folder_path):
 			print("Folder path " + save_folder_path + " could not be found.")
+			return
+		if not os.path.exists(save_folder_path + "vocab.json") or not os.path.isdir(save_folder_path + "vocab.json"):
+			print("File path " + save_folder_path + "vocab.json could not be found.")
+			return
+		if not os.path.exists(save_folder_path + "tokens.json") or not os.path.isdir(save_folder_path + "tokens.json"):
+			print("File path " + save_folder_path + "tokens.json could not be found.")
+			return
+		if not os.path.exists(save_folder_path + "token2value.json") or not os.path.isdir(save_folder_path + "token2value.json"):
+			print("File path " + save_folder_path + "token2value.json could not be found.")
 			return
 
 		# Open the vocabulary and tokens json files and save the data
