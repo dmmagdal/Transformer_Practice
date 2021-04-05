@@ -46,6 +46,7 @@ def main():
 	path = "./openwebtext/"
 	files = [path + file for file in os.listdir(path)]
 	FILES_PER_CHUNK = 5000
+	#FILES_PER_CHUNK = 50
 
 	# Split the files up into sections of 5000 text files per chunk.
 	# Given the total number of files, there will be 5 chunks with
@@ -85,6 +86,7 @@ def main():
 			# Encoder.
 			chunk_encoder = bpe.Encoder(chunk_vocab)
 			chunk_encoder.learn_vocab(num_merges=2**14)
+			#chunk_encoder.learn_vocab(num_merges=2**10)
 			chunk_encoder.save(save_path)
 
 		# Add the tokens to the global dictionary of learned tokens.

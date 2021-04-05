@@ -12,6 +12,7 @@ import os
 import re
 import collections
 import json
+from tqdm import tqdm
 
 
 def get_vocab(file_path):
@@ -240,7 +241,9 @@ class Encoder:
 
 		# Iterate through the following loop to update the vocabulary
 		# (and tokens).
-		for i in range(merges):
+		print("Learning Vocabulary:")
+		#for i in range(merges):
+		for i in tqdm(range(merges)):
 			# Break out of the loop if the token limit has been
 			# initialized and is reached.
 			if token_size and len(self.tokens) == token_size:
