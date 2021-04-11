@@ -45,7 +45,8 @@ def main():
 	# Get the list of files in the openwebtext corpus folder.
 	path = "./openwebtext/"
 	files = [path + file for file in os.listdir(path)]
-	FILES_PER_CHUNK = 5000
+	FILES_PER_CHUNK = 1000
+	#FILES_PER_CHUNK = 5000
 	#FILES_PER_CHUNK = 50
 
 	# Split the files up into sections of 5000 text files per chunk.
@@ -85,7 +86,8 @@ def main():
 			# tokens has reached a maximum. Save the details of that
 			# Encoder.
 			chunk_encoder = bpe.Encoder(chunk_vocab)
-			chunk_encoder.learn_vocab(num_merges=2**14)
+			chunk_encoder.learn_vocab(num_merges=2**12)
+			#chunk_encoder.learn_vocab(num_merges=2**14)
 			#chunk_encoder.learn_vocab(num_merges=2**10)
 			chunk_encoder.save(save_path)
 
