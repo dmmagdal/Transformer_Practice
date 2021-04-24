@@ -6,8 +6,6 @@
     "embedding_size": 256,
     "dropout_rate": 0.1,
     "optimizer": "adam",
-    "loss": "sparse_categorical_crossentropy",
-    "metrics": [
-        "accuracy"
-    ]
+    "loss": "",
+    "metrics": ""
 }

@@ -231,7 +231,7 @@ class GPT2:
 	def __init__(self, n_heads=12, n_layers=12, vocab_size=2**16, ff_dim=32,
 				embedding_size=1024, context_size=1024, dropout_rate=0.1, 
 				optimizer="adam", loss="sparse_categorical_crossentropy", 
-				metrics=["accuracy"]):
+				metrics=["accuracy"], model_name=None):
 		#super(GPT2, self).__init__()
 		# Hyperparameters.
 		self.n_heads = n_heads
@@ -256,7 +256,7 @@ class GPT2:
 											self.ff_dim, self.dropout_rate) 
 								for i in range(self.n_layers)]
 		self.linear_layer = Dense(self.vocab_size)
-		self.gpt_model = self.create_model()
+		self.gpt_model = self.create_model(model_name)
 		
 		# Build and compile model. Print the model summary.
 		self.gpt_model.compile(optimizer=self.optimizer, loss=self.loss, 
@@ -266,9 +266,12 @@ class GPT2:
 
 	# Create the model (not meant to be called from outsite the GPT2
 	# object).
-	# @param: takes no arguments.
+	# @param: model_name, a string that names the model.
 	# @return: returns a tensorflow/keras Model.
-	def create_model(self):
+	def create_model(self, model_name):
+		if model_name is None:
+			model_name = "model"
+
 		# Start with the input layer.
 		inputs = self.input_layer
 
@@ -285,7 +288,7 @@ class GPT2:
 		
 		# Return a tensorflow/keras model object.
 		#return Model(inputs=inputs, outputs=outputs)
-		return Model(inputs=inputs, outputs=[outputs, x])
+		return Model(inputs=inputs, outputs=[outputs, x], name=model_name)
 
 
 	# Load an existing model and its hyperparameters.
@@ -318,9 +321,9 @@ class GPT2:
 		self.embedding_size = hparams["embedding_size"]
 		self.ff_dim = hparams["ff_dim"]
 		self.dropout_rate = hparams["dropout_rate"]
-		self.optimizer = hparams["optimizer"]
-		self.loss = hparams["loss"]
-		self.metrics = hparams["metrics"]
+		self.optimizer = "adam" if hparams["optimizer"] == "" else hparams["optimizer"]
+		self.loss = "sparse_categorical_crossentropy" if hparams["loss"] == "" else hparams["loss"]
+		self.metrics = "accuracy" if hparams["metrics"] == "" else hparams["accuracy"]
 		self.gpt_model = load_model(h5_model_file, 
 									custom_objects={"TokenAndPositionEmbedding": TokenAndPositionEmbedding,
 													"DecoderBlock": DecoderBlock})
@@ -349,8 +352,9 @@ class GPT2:
 					"vocab_size": self.vocab_size, "ff_dim": self.ff_dim,
 					"embedding_size": self.embedding_size, 
 					"dropout_rate": self.dropout_rate, 
-					"optimizer": self.optimizer, "loss": self.loss,
-					"metrics": self.metrics}
+					"optimizer": self.optimizer if isinstance(self.optimizer, str) else "", 
+					"loss": self.loss if isinstance(self.loss, str) else "",
+					"metrics": self.metrics if isinstance(self.metrics, str) else ""}
 		with open(hparams_file, "w+") as json_file:
 			json.dump(hparams, json_file, indent=4)
 		self.gpt_model.save(h5_model_file)
