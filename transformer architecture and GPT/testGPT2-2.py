@@ -8,6 +8,7 @@
 # Windows/MacOS/Linux
 
 
+import gc
 import tensorflow as tf
 import gpt2
 
@@ -72,7 +73,8 @@ def main():
 			"ff_dim": 1600 * 4,
 			"context_size": 1024
 		}
-	}		
+	}
+	loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
 	# Iterate through each model and try to initialize each.
 	model_status = {model: False for model in hparams}
@@ -82,9 +84,12 @@ def main():
 							vocab_size=hparams[model]["vocab_size"],
 							ff_dim=hparams[model]["ff_dim"], 
 							embedding_size=hparams[model]["embedding_size"], 
-							context_size=hparams[model]["context_size"])
+							context_size=hparams[model]["context_size"],
+							loss=loss_fn)
 		model_status[model] = True
 		print("Model " + str(model) + " successfully initialized.")
+		del new_gpt
+		gc.collect()
 
 	'''
 	# Print out which models were able to be initialized.

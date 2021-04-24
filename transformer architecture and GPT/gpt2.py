@@ -281,10 +281,11 @@ class GPT2:
 
 		# Pass input from the last decoder layer through to the linear
 		# layer.
-		output = self.linear_layer(x)
+		outputs = self.linear_layer(x)
 		
 		# Return a tensorflow/keras model object.
-		return Model(inputs=inputs, outputs=output)
+		#return Model(inputs=inputs, outputs=outputs)
+		return Model(inputs=inputs, outputs=[outputs, x])
 
 
 	# Load an existing model and its hyperparameters.
@@ -382,10 +383,10 @@ class GPT2:
 
 
 	# Generate a text from the model given a prompt.
-	# @param:
-	# @param:
-	# @param:
-	# @param:
+	# @param: input_prompt,
+	# @param: max_length,
+	# @param: top_k,
+	# @param: num_return_sequences,
 	# @param:
 	# @return: returns nothing.
 	def generate(self, input_prompt, max_length, top_k, num_return_sequences):
@@ -438,14 +439,14 @@ class TextGenerator(tf.keras.callbacks.Callback):
 			sample_index = len(start_tokens) - 1
 			if pad_len < 0:
 				x = start_tokens[:self.max_len]
-				sample_index = max_len - 1
+				sample_index = self.max_len - 1
 			elif pad_len > 0:
 				x = start_tokens + [0] * pad_len
 			else:
 				x = start_tokens
 			x = np.array([x])
-			# y, _ = self.model.predict(x)
-			y = self.model.predict(x)
+			y, _ = self.model.predict(x)
+			# y = self.model.predict(x)
 			sample_token = self.sample_from(y[0][sample_index])
 			tokens_generated.append(sample_token)
 			start_tokens.append(sample_token)

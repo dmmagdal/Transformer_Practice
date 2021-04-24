@@ -117,10 +117,12 @@ def main():
 											vocab, max_len)
 
 	# Initialize a GPT2 object.
+	loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 	#new_gpt = gpt2.GPT2()
 	new_gpt = gpt2.GPT2(n_heads=n_heads, n_layers=1, vocab_size=vocab_size,
 						ff_dim=ff_dim, embedding_size=embedding_size, 
-						context_size=max_len)
+						context_size=max_len, loss=[loss_fn, None], 
+						metrics=None)
 
 	# Train GPT2 on data.
 	'''

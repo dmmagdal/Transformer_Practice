@@ -319,13 +319,13 @@ class Encoder:
 		if not os.path.exists(save_folder_path) or not os.path.isdir(save_folder_path):
 			print("Folder path " + save_folder_path + " could not be found.")
 			return
-		if not os.path.exists(save_folder_path + "vocab.json") or not os.path.isdir(save_folder_path + "vocab.json"):
+		if not os.path.exists(save_folder_path + "vocab.json") or not os.path.isfile(save_folder_path + "vocab.json"):
 			print("File path " + save_folder_path + "vocab.json could not be found.")
 			return
-		if not os.path.exists(save_folder_path + "tokens.json") or not os.path.isdir(save_folder_path + "tokens.json"):
+		if not os.path.exists(save_folder_path + "tokens.json") or not os.path.isfile(save_folder_path + "tokens.json"):
 			print("File path " + save_folder_path + "tokens.json could not be found.")
 			return
-		if not os.path.exists(save_folder_path + "token2value.json") or not os.path.isdir(save_folder_path + "token2value.json"):
+		if not os.path.exists(save_folder_path + "token2value.json") or not os.path.isfile(save_folder_path + "token2value.json"):
 			print("File path " + save_folder_path + "token2value.json could not be found.")
 			return
 
