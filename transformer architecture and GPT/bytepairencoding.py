@@ -54,8 +54,11 @@ def merge_vocab(pair, input_vocab):
 	bigram = re.escape(" ".join(pair))
 	p = re.compile(r'(?<!\S)' + bigram + r'(?!\S)')
 	for word in input_vocab:
-		output_word = p.sub("".join(pair), word)
-		output_vocab[output_word] = input_vocab[word]
+		try:
+			output_word = p.sub("".join(pair), word)
+			output_vocab[output_word] = input_vocab[word]
+		except:
+			continue
 	return output_vocab
 
 
