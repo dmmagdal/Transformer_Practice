@@ -40,6 +40,11 @@ def main():
 	# GPT-2 max_len or context_size = 1024
 	# GPT-2 vocab_size = 50257
 	# GPT-2 ff_dim = 4 * embeding_dim
+	# OpenAI GPT-1 Hyperparameters
+	# GPT-1				768				12			12
+	# GPT-1 max_len or context_size = 512
+	# GPT-1 vocab_size = 40,000 (40,000 merges on vocab using BPE).
+	# GPT-1 ff_dim = 3072 (4 * embed_dim)
 	hparams = {
 		"Small": {
 			"vocab_size": 50257,
