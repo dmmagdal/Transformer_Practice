@@ -42,3 +42,17 @@ https://hub.docker.com/r/tensorflow/tensorflow/tags/?page=1&ordering=last_update
 
 	Docker cheatsheet:
 https://groupe-sii.github.io/cheat-sheets/docker/index.html
+
+### Tensorflow Text Encoders
+
+TextVectorization Layer
+https://www.tensorflow.org/api_docs/python/tf/keras/layers/experimental/preprocessing/TextVectorization
+
+SubwordTextEncoder
+https://www.tensorflow.org/datasets/api_docs/python/tfds/deprecated/text/SubwordTextEncoder
+
+ByteTextEncoder
+https://www.tensorflow.org/datasets/api_docs/python/tfds/deprecated/text/ByteTextEncoder
+
+Tokenizer
+https://www.tensorflow.org/api_docs/python/tf/keras/preprocessing/text/Tokenizer

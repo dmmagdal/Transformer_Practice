@@ -101,7 +101,7 @@ def main():
 
 	# Save the global dictionary of all tokens learned in the corpus.
 	with open("openwebtext_corpus_tokens.json", "w+", encoding="utf-8") as token_file:
-		json.dump(global_tokens, token_file)
+		json.dump(global_tokens, token_file, indent=4)
 
 	# Exit the program.
 	exit(0)
