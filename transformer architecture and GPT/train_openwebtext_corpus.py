@@ -8,6 +8,7 @@
 
 
 import os
+import json
 import string
 import random
 import gpt2
@@ -16,13 +17,13 @@ from tensorflow import keras
 from tensorflow.keras.layers.experimental.preprocessing import TextVectorization
 
 
-'''
+#'''
 # Configuration code for allowing GPU usage on Tensorflow 2. Comment
 # out when running on Tensorflow 1 on CPU.
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth=True
 session = tf.compat.v1.Session(config=config)
-'''
+#'''
 
 
 def main():
@@ -31,8 +32,21 @@ def main():
 	corpus_path = "./openwebtext"
 	text_files = [corpus_path + "/" + file 
 					for file in os.listdir(corpus_path)]
-	batch_size = 128
+	#text_files = [corpus_path + "/" + file
+	#				for file in random.sample(os.listdir(corpus_path), 2500)]
+	#batch_size = 128
+	batch_size = 16
 	print("All training data indexed.")
+
+	# Notes on the size of each epoch for the text files in
+	# openwebtext corpus:
+	# No. of samples in epoch 	No. of files used (time for one epoch using smallest hyperparameters)
+	# 1+ Million				all 21,000	(Actual no. of samples and time unknown)
+	# 623,000					5000/21,000 (Actual time unknown)
+	# 315,000					2500/21,000 (11.5 hours)
+	# 124,000					1000/21,000 (4.5 hours)
+	# 62,000					500/21,000 (2.5 hours)
+	# 12,000					100/21,000 (30 minutes)
 
 	# Create a dataset from the text fields.
 	print("Initializing dataset...")
@@ -43,6 +57,13 @@ def main():
 	print("Dataset initialized.")
 
 	# Model hyperparameters.
+	vocab_range = sorted([20000, 50257] + [2 ** i for i in range(14, 17)])
+	context_size_range = sorted([80] + [2 ** i for i in range(7, 11)])
+	embedding_size_range = sorted([768] + [2 ** i for i in range(8, 11)])
+	ff_dim_range = [i * 4 for i in embedding_size_range]
+	n_layers_range = [i for i in range(1, 17)]
+	n_heads_range = [2 * i for i in range(1, 9)]
+
 	vocab_size = 50257
 	context_size = 1024
 	embedding_size = 1024
@@ -83,6 +104,15 @@ def main():
 	embedding_size = 256
 	context_size = 80
 
+	# Bringing down the batch size for the dataset batch allows for
+	# larger model size. But must allow for more samples.
+	vocab_size = 50257
+	context_size = 128
+	embedding_size = 1024
+	ff_dim = 512
+	n_heads = 6
+	n_layers = 6
+
 	# Mapping hyperparameters to models and their abilitiy to compile.
 	# model_name, parameters, n_layers, n_heads, ff_dim, vocab_size, embedding_size, context_size, compile_model, run_model, reason_to_not_run
 	# gpt2_xxs    11 Million  1         2        256     20,000      256             80            Yes            Yes        N/A
@@ -119,6 +149,9 @@ def main():
 	)
 	vectorize_layer.adapt(text_ds)
 	vocab = vectorize_layer.get_vocabulary() # Get words back from token indices
+	#text_ds = text_ds.take(315000)
+	# text_ds = text_ds.take(1200)
+	text_ds = text_ds.take(126000)
 	text_ds = text_ds.map(prepare_lm_inputs_labels)
 	text_ds = text_ds.prefetch(tf.data.experimental.AUTOTUNE)
 	print("Done.")
@@ -141,13 +174,31 @@ def main():
 											vocab, context_size)
 	print("Created text generator callback.")
 
+	# Save the mapping from the vocab to value mappings.
+	print("Saving vocabulary...")
+	model_name = "gpt2-test"
+	save_path = "./" + model_name
+
+	if not os.path.exists(save_path):
+		os.mkdir(save_path)
+	
+	with open("./" + model_name + "/vocab.json", "w+") as v_file:
+		json.dump(word_to_index, v_file, indent=4)
+	print("Vocabulary saved.")
+
 	# Initialize a GPT2 object.
 	print("Initializing GPT2 model...")
 	loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 	new_gpt = gpt2.GPT2(n_heads=n_heads, n_layers=n_layers, vocab_size=vocab_size,
 						ff_dim=ff_dim, embedding_size=embedding_size, 
 						context_size=context_size, loss=[loss_fn, None], 
+						metrics=None, model_name=model_name)
+	'''
+	new_gpt = gpt2.GPT2(n_heads=n_heads, n_layers=n_layers, vocab_size=vocab_size,
+						ff_dim=ff_dim, embedding_size=embedding_size, 
+						context_size=context_size, loss=[loss_fn, None], 
 						metrics=None, model_name="gpt2-xxs")
+	'''
 	'''
 	new_gpt = gpt2.GPT2(n_heads=n_heads, n_layers=n_layers, vocab_size=vocab_size,
 						ff_dim=ff_dim, embedding_size=embedding_size, 
@@ -181,16 +232,21 @@ def main():
 
 	# Train GPT2 on data.
 	print("Starting training...")
-	if not os.path.exists("./model_checkpoints"):
-		os.mkdir("./model_checkpoints")
+
+	checkpoint_path = "./" + model_name + "_model_checkpoints"
+	if not os.path.exists(checkpoint_path):
+		os.mkdir(checkpoint_path)
 	model_checkpoint = keras.callbacks.ModelCheckpoint(
-		"./model_checkpoints/", save_weights_only=True, save_best_only=True
+		checkpoint_path, save_weights_only=True, #save_best_only=True
 	)
 	new_gpt.gpt_model.fit(
-		text_ds, verbose=verbose, epochs=epochs, batch_size=64
-		callbacks=[text_gen_callback, model_checkpoint]
+		text_ds, verbose=verbose, epochs=epochs, batch_size=64,
+		#callbacks=[text_gen_callback, model_checkpoint]
+		callbacks=[text_gen_callback]
 	)
 	print("Model trained.")
+	# Note: It's taken 48 hours to train on 1.1 Million samples in what
+	# is presumed to be a 158 Million sample dataset.
 
 	# Save GPT2 model.
 	#save_path = "./gpt2_xl"
@@ -198,7 +254,8 @@ def main():
 	#save_path = "./gpt2_medium"
 	#save_path = "./gpt2_small"
 	#save_path = "./gpt2_xs"
-	save_path = "./gpt2_xxs"
+	#save_path = "./gpt2_xxs"
+	save_path = "./" + model_name
 	if not os.path.exists(save_path):
 		os.mkdir(save_path)
 	new_gpt.save(save_path)
